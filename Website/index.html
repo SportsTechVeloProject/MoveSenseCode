@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Movesense — Live Readout</title>
+<style>
+  :root {
+    --bg: #14181c;
+    --panel: #1c2128;
+    --line: #2a3038;
+    --text: #e6e9ec;
+    --dim: #7d8792;
+    --live: #5fd68a;
+    --idle: #d68a5f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Söhne", "Inter", system-ui, sans-serif;
+    padding: 48px 32px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { color: var(--dim); font-size: 14px; margin-bottom: 40px; }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 32px;
+    font-size: 14px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--idle);
+    transition: background 0.2s;
+  }
+  .dot.live { background: var(--live); }
+
+  .readout {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .cell {
+    background: var(--panel);
+    padding: 20px;
+  }
+  .cell .label {
+    font-size: 12px;
+    color: var(--dim);
+    margin-bottom: 8px;
+  }
+  .cell .value {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  canvas {
+    width: 100%;
+    height: 160px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    display: block;
+  }
+
+  .hint {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+  .hint code {
+    background: var(--panel);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: ui-monospace, monospace;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Sensor readout</h1>
+    <div class="subtitle">Live stream from your Movesense bridge</div>
+
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Waiting for bridge…</span>
+    </div>
+
+    <div class="readout">
+      <div class="cell">
+        <div class="label">X</div>
+        <div class="value" id="valX">—</div>
+      </div>
+      <div class="cell">
+        <div class="label">Y</div>
+        <div class="value" id="valY">—</div>
+      </div>
+      <div class="cell">
+        <div class="label">Z</div>
+        <div class="value" id="valZ">—</div>
+      </div>
+    </div>
+
+    <canvas id="trace" width="720" height="160"></canvas>
+
+    <div class="hint">
+      This page connects to <code>movesense_bridge.py</code> at <code>ws://localhost:8765</code>.
+      Make sure the bridge is running before loading this page — see <code>onSample()</code>
+      in <code>js/movesense-client.js</code> to change what happens with each new reading.
+    </div>
+  </div>
+
+  <script src="js/movesense-client.js"></script>
+  <script>
+    // --- Wire the generic client hooks up to this page's UI ---
+    const dot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const valX = document.getElementById('valX');
+    const valY = document.getElementById('valY');
+    const valZ = document.getElementById('valZ');
+
+    function onBridgeStatusChange(status) {
+      if (status === 'connected') {
+        dot.classList.add('live');
+        statusText.textContent = 'Streaming';
+      } else {
+        dot.classList.remove('live');
+        statusText.textContent = 'Disconnected — retrying…';
+      }
+    }
+
+    // Simple scrolling trace of the X axis, drawn on canvas.
+    const canvas = document.getElementById('trace');
+    const ctx = canvas.getContext('2d');
+    const history = [];
+    const MAX_POINTS = 300;
+
+    function drawTrace() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (history.length < 2) return;
+
+      const mid = canvas.height / 2;
+      const scale = 8; // pixels per unit of acceleration
+      const step = canvas.width / MAX_POINTS;
+
+      ctx.strokeStyle = '#5fd68a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      history.forEach((v, i) => {
+        const x = i * step;
+        const y = mid - v * scale;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    function onSample(sample) {
+      valX.textContent = sample.x.toFixed(2);
+      valY.textContent = sample.y.toFixed(2);
+      valZ.textContent = sample.z.toFixed(2);
+
+      history.push(sample.x);
+      if (history.length > MAX_POINTS) history.shift();
+      drawTrace();
+    }
+  </script>
+</body>
+</html>
