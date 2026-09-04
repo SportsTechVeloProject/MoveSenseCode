@@ -1,0 +1,76 @@
+<svg viewBox="0 0 900 1080" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="900" height="1080" fill="#ffffff"/>
+
+  <defs>
+    <marker id="arrowSolid" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#555555"/>
+    </marker>
+    <marker id="arrowDashed" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <!-- Box 1: IMU sensors -->
+  <rect x="130" y="30" width="640" height="90" rx="14" fill="#e8f5ee" stroke="#2f9e5f" stroke-width="1.5"/>
+  <text x="450" y="66" text-anchor="middle" font-size="19" font-weight="700" fill="#1f6b42">IMU Sensors</text>
+  <text x="450" y="90" text-anchor="middle" font-size="14" fill="#2f9e5f">Both barbell ends</text>
+
+  <line x1="450" y1="120" x2="450" y2="160" stroke="#555555" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+  <!-- Box 2: Web Bluetooth (BUILT) -->
+  <rect x="130" y="160" width="640" height="110" rx="14" fill="#eef0fb" stroke="#6366f1" stroke-width="1.5"/>
+  <rect x="700" y="174" width="56" height="22" rx="11" fill="#d1fae5"/>
+  <text x="728" y="189" text-anchor="middle" font-size="11" font-weight="700" fill="#047857">BUILT</text>
+  <text x="450" y="196" text-anchor="middle" font-size="18" font-weight="700" fill="#3730a3">Web Bluetooth</text>
+  <text x="450" y="220" text-anchor="middle" font-size="13" fill="#4b5563">ble.js (real sensors) + simulate.js (hardware-free)</text>
+  <text x="450" y="240" text-anchor="middle" font-size="13" fill="#4b5563">Direct to browser — no bridge process</text>
+
+  <line x1="450" y1="270" x2="450" y2="310" stroke="#555555" stroke-width="2" marker-end="url(#arrowSolid)"/>
+
+  <!-- Box 3: Local Storage (BUILT) -->
+  <rect x="130" y="310" width="640" height="110" rx="14" fill="#eef0fb" stroke="#6366f1" stroke-width="1.5"/>
+  <rect x="700" y="324" width="56" height="22" rx="11" fill="#d1fae5"/>
+  <text x="728" y="339" text-anchor="middle" font-size="11" font-weight="700" fill="#047857">BUILT</text>
+  <text x="450" y="346" text-anchor="middle" font-size="18" font-weight="700" fill="#3730a3">Local Storage</text>
+  <text x="450" y="370" text-anchor="middle" font-size="13" fill="#4b5563">storage.js — IndexedDB, sessions + samples</text>
+  <text x="450" y="390" text-anchor="middle" font-size="13" fill="#4b5563">Batched writes while recording</text>
+
+  <line x1="450" y1="420" x2="450" y2="460" stroke="#9ca3af" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrowDashed)"/>
+
+  <!-- Box 4: Processing (PLANNED) -->
+  <rect x="130" y="460" width="640" height="100" rx="14" fill="#f5f5f7" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <rect x="700" y="474" width="76" height="22" rx="11" fill="#e5e7eb"/>
+  <text x="738" y="489" text-anchor="middle" font-size="11" font-weight="700" fill="#4b5563">PLANNED</text>
+  <text x="450" y="500" text-anchor="middle" font-size="18" font-weight="700" fill="#4b5563">Processing</text>
+  <text x="450" y="524" text-anchor="middle" font-size="13" fill="#6b7280">Acceleration → velocity, rep detection</text>
+
+  <line x1="450" y1="560" x2="450" y2="600" stroke="#9ca3af" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrowDashed)"/>
+
+  <!-- Box 5: Backend + Accounts (PLANNED) -->
+  <rect x="130" y="600" width="640" height="110" rx="14" fill="#f5f5f7" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <rect x="700" y="614" width="76" height="22" rx="11" fill="#e5e7eb"/>
+  <text x="738" y="629" text-anchor="middle" font-size="11" font-weight="700" fill="#4b5563">PLANNED</text>
+  <text x="450" y="636" text-anchor="middle" font-size="18" font-weight="700" fill="#4b5563">Backend + Accounts</text>
+  <text x="450" y="660" text-anchor="middle" font-size="13" fill="#6b7280">Coach / student login</text>
+  <text x="450" y="680" text-anchor="middle" font-size="13" fill="#6b7280">Synced session data — provider TBD</text>
+
+  <line x1="450" y1="710" x2="450" y2="750" stroke="#9ca3af" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrowDashed)"/>
+
+  <!-- Box 6: Screens (PARTIAL) -->
+  <rect x="130" y="750" width="640" height="250" rx="14" fill="#eef0fb" stroke="#6366f1" stroke-width="1.5"/>
+  <rect x="676" y="764" width="80" height="22" rx="11" fill="#fef3c7"/>
+  <text x="716" y="779" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">IN PROGRESS</text>
+  <text x="450" y="796" text-anchor="middle" font-size="18" font-weight="700" fill="#3730a3">Screens</text>
+  <text x="450" y="822" font-size="13" fill="#4b5563"><tspan x="220" fill="#047857" font-weight="700">✓ </tspan><tspan fill="#4b5563">Live view — built, becoming a dev/debug panel</tspan></text>
+  <text x="450" y="852" font-size="13" fill="#6b7280"><tspan x="220" fill="#9ca3af" font-weight="700">○ </tspan><tspan fill="#6b7280">Login</tspan></text>
+  <text x="450" y="882" font-size="13" fill="#6b7280"><tspan x="220" fill="#9ca3af" font-weight="700">○ </tspan><tspan fill="#6b7280">Exercise selection</tspan></text>
+  <text x="450" y="912" font-size="13" fill="#6b7280"><tspan x="220" fill="#9ca3af" font-weight="700">○ </tspan><tspan fill="#6b7280">Post-lift feedback</tspan></text>
+  <text x="450" y="942" font-size="13" fill="#6b7280"><tspan x="220" fill="#9ca3af" font-weight="700">○ </tspan><tspan fill="#6b7280">Results / history (friendlier than the current table)</tspan></text>
+
+  <!-- Legend -->
+  <line x1="150" y1="1030" x2="190" y2="1030" stroke="#555555" stroke-width="2"/>
+  <text x="198" y="1035" font-size="13" fill="#4b5563">built</text>
+  <line x1="260" y1="1030" x2="300" y2="1030" stroke="#9ca3af" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="308" y="1035" font-size="13" fill="#6b7280">planned</text>
+  <text x="750" y="1035" text-anchor="end" font-size="12" fill="#9ca3af">see BACKLOG.md</text>
+</svg>
