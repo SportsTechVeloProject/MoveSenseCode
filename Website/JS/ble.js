@@ -30,6 +30,19 @@ const MSBle = (() => {
   // label -> { device, server, commandChar, dataChar, intentional }
   const devices = {};
 
+  // labels currently mid-connect — guards against overlapping gatt.connect()
+  // calls on the same device (e.g. a manual click racing the auto-reconnect
+  // handler), which Chrome rejects with "GATT operation already in progress".
+  const connecting = new Set();
+
+  function isGattBusyError(err) {
+    return err && err.name === "NotSupportedError" && /already in progress/i.test(err.message || "");
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   let sampleHandler = () => {};
   let statusHandler = () => {};
 
@@ -68,7 +81,7 @@ const MSBle = (() => {
     }
   }
 
-  async function connect(label) {
+  async function connectOnce(label) {
     const entry = devices[label];
     const device = entry.device;
 
@@ -103,6 +116,32 @@ const MSBle = (() => {
       ...new TextEncoder().encode(resource),
     ]);
     await commandChar.writeValue(subscribePayload);
+  }
+
+  // Wraps connectOnce with two robustness measures against the flaky
+  // "NotSupportedError: GATT operation already in progress" that Windows'
+  // Bluetooth stack throws when a prior GATT session on this device hasn't
+  // fully released yet:
+  //   1. A per-label lock, so a manual connect and an auto-reconnect can
+  //      never call gatt.connect() on the same device concurrently.
+  //   2. One automatic retry after a short delay — this specific error is
+  //      usually transient and clears up on its own within a second.
+  async function connect(label) {
+    if (connecting.has(label)) {
+      throw new Error(`[${label}] a connection attempt is already in progress`);
+    }
+    connecting.add(label);
+    try {
+      try {
+        await connectOnce(label);
+      } catch (err) {
+        if (!isGattBusyError(err)) throw err;
+        await delay(800);
+        await connectOnce(label);
+      }
+    } finally {
+      connecting.delete(label);
+    }
   }
 
   function onDisconnected(label) {
