@@ -98,6 +98,10 @@ const MSStorage = (() => {
           x: sample.x,
           y: sample.y,
           z: sample.z,
+          gx: sample.gx,
+          gy: sample.gy,
+          gz: sample.gz,
+          vVert: sample.vVert,
         });
       }
       tx.oncomplete = () => resolve();
@@ -162,9 +166,10 @@ const MSStorage = (() => {
   }
 
   function toCsv(samples) {
-    const header = "sessionId,sensor,t,recvAt,x,y,z";
+    const header = "sessionId,sensor,t,recvAt,x,y,z,gx,gy,gz,vVert";
     const rows = samples.map(
-      (s) => `${s.sessionId},${s.sensor},${s.t},${s.recvAt},${s.x},${s.y},${s.z}`
+      (s) =>
+        `${s.sessionId},${s.sensor},${s.t},${s.recvAt},${s.x},${s.y},${s.z},${s.gx},${s.gy},${s.gz},${s.vVert}`
     );
     return [header, ...rows].join("\n");
   }

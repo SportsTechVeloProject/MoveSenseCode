@@ -81,6 +81,16 @@
     cursor: pointer;
   }
 
+  select {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  select:disabled { opacity: 0.5; cursor: default; }
+
   .sensor-panel {
     margin-bottom: 24px;
     padding-bottom: 24px;
@@ -98,7 +108,7 @@
 
   .readout {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     background: var(--line);
     border: 1px solid var(--line);
@@ -106,11 +116,11 @@
     overflow: hidden;
     margin-bottom: 16px;
   }
-  .cell { background: var(--panel); padding: 20px; }
+  .cell { background: var(--panel); padding: 16px 14px; }
   .cell .label { font-size: 12px; color: var(--dim); margin-bottom: 8px; }
   .cell .value {
     font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
-    font-size: 24px;
+    font-size: 22px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -122,6 +132,13 @@
     border-radius: 6px;
     display: block;
   }
+
+  .peak {
+    font-size: 13px;
+    color: var(--dim);
+    margin-top: 8px;
+  }
+  .peak span { color: var(--text); font-variant-numeric: tabular-nums; }
 
   #panels:empty::after {
     content: "Connect a sensor (or enable simulate mode) to see live data.";
@@ -201,6 +218,13 @@
         <input type="checkbox" id="simulateToggle" />
         Use simulated sensors (no hardware)
       </label>
+      <label class="checkbox-row">
+        Scenario:
+        <select id="simulateScenario" disabled>
+          <option value="lift" selected>Real lift (vertical pulse)</option>
+          <option value="rotation">Rotation only (bar spin, no travel)</option>
+        </select>
+      </label>
       <div class="warning" id="bleWarning" hidden>
         Web Bluetooth isn't available in this browser — falling back to simulated sensors.
         Try Chrome or Edge for real hardware.
@@ -246,6 +270,7 @@
   </div>
 
   <script src="JS/storage.js"></script>
+  <script src="JS/processing.js"></script>
   <script src="JS/ble.js"></script>
   <script src="JS/simulate.js"></script>
   <script src="JS/app.js"></script>

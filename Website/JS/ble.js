@@ -23,12 +23,21 @@ const MSBle = (() => {
   const RESP_COMMAND_RESULT = 1;
   const RESP_DATA = 2;
   const REF_ACC = 99;
+  const REF_GYRO = 100;
 
   const RESOURCE_PATH = "/Meas/Acc";
+  const GYRO_RESOURCE_PATH = "/Meas/Gyro";
   const SAMPLE_RATE_HZ = 104;
+  const GYRO_SANITY_LIMIT_DPS = 2000; // generous bound, just catches a misparse
 
   // label -> { device, server, commandChar, dataChar, intentional }
   const devices = {};
+
+  // label -> { gx, gy, gz } (deg/s, raw) — latest Gyro reading, attached to
+  // each emitted Acc-based sample. Acc and Gyro arrive as separate BLE
+  // notification streams, not perfectly interleaved, so we sample-and-hold
+  // the most recent Gyro reading rather than trying to pair them exactly.
+  const latestGyro = {};
 
   // labels currently mid-connect — guards against overlapping gatt.connect()
   // calls on the same device (e.g. a manual click racing the auto-reconnect
@@ -65,10 +74,33 @@ const MSBle = (() => {
       return; // subscribe ack, nothing to do with it here
     }
 
+    if (response === RESP_DATA && reference === REF_GYRO) {
+      const numSamples = (value.byteLength - 6) / 12;
+      if (!Number.isFinite(numSamples) || numSamples < 1) return;
+
+      // Only the most recent sample in the packet is kept — sample-and-hold,
+      // not full-resolution gyro storage (see latestGyro comment above).
+      const last = numSamples - 1;
+      const gx = value.getFloat32(6 + last * 12, true);
+      const gy = value.getFloat32(6 + last * 12 + 4, true);
+      const gz = value.getFloat32(6 + last * 12 + 8, true);
+
+      const plausible = [gx, gy, gz].every(
+        (v) => Number.isFinite(v) && Math.abs(v) <= GYRO_SANITY_LIMIT_DPS
+      );
+      if (!plausible) {
+        console.warn(`[${label}] implausible gyro sample, dropping`, gx, gy, gz);
+        return;
+      }
+      latestGyro[label] = { gx, gy, gz };
+      return;
+    }
+
     if (response === RESP_DATA && reference === REF_ACC) {
       const timestampMs = value.getUint32(2, true);
       const numSamples = (value.byteLength - 6) / 12;
       const recvAt = Date.now();
+      const gyro = latestGyro[label]; // undefined until first Gyro notification arrives
 
       for (let i = 0; i < numSamples; i++) {
         const x = value.getFloat32(6 + i * 12, true);
@@ -76,7 +108,18 @@ const MSBle = (() => {
         const z = value.getFloat32(6 + i * 12 + 8, true);
         const t = timestampMs / 1000.0 + i / SAMPLE_RATE_HZ;
 
-        sampleHandler({ sensor: label, device: deviceName, t, recvAt, x, y, z });
+        sampleHandler({
+          sensor: label,
+          device: deviceName,
+          t,
+          recvAt,
+          x,
+          y,
+          z,
+          gx: gyro ? gyro.gx : undefined,
+          gy: gyro ? gyro.gy : undefined,
+          gz: gyro ? gyro.gz : undefined,
+        });
       }
     }
   }
@@ -116,6 +159,18 @@ const MSBle = (() => {
       ...new TextEncoder().encode(resource),
     ]);
     await commandChar.writeValue(subscribePayload);
+
+    // Sequential, not concurrent, with the Acc subscribe above — both writes
+    // share one command characteristic, and issuing them at once risks the
+    // same "GATT operation already in progress" race the connect() wrapper
+    // below already guards against.
+    const gyroResource = `${GYRO_RESOURCE_PATH}/${SAMPLE_RATE_HZ}`;
+    const gyroSubscribePayload = new Uint8Array([
+      CMD_SUBSCRIBE,
+      REF_GYRO,
+      ...new TextEncoder().encode(gyroResource),
+    ]);
+    await commandChar.writeValue(gyroSubscribePayload);
   }
 
   // Wraps connectOnce with two robustness measures against the flaky
@@ -195,6 +250,7 @@ const MSBle = (() => {
       entry.device.gatt.disconnect();
     }
     delete devices[label];
+    delete latestGyro[label];
   }
 
   return {

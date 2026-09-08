@@ -23,7 +23,8 @@ const state = {
   },
 };
 
-const panels = {}; // sensor label -> { valX, valY, valZ, canvas, ctx, history }
+const panels = {}; // sensor label -> { valX, valY, valZ, valV, valPeak, canvas, ctx, history, peak }
+const trackers = {}; // sensor label -> MSProcessing tracker instance
 
 // --- Live panels (dark-theme readout + canvas trace) ---
 
@@ -38,8 +39,10 @@ function ensurePanel(label) {
       <div class="cell"><div class="label">X</div><div class="value" data-x>—</div></div>
       <div class="cell"><div class="label">Y</div><div class="value" data-y>—</div></div>
       <div class="cell"><div class="label">Z</div><div class="value" data-z>—</div></div>
+      <div class="cell"><div class="label">V (m/s)</div><div class="value" data-v>—</div></div>
     </div>
     <canvas width="720" height="140"></canvas>
+    <div class="peak">Peak: <span data-peak>—</span> m/s</div>
   `;
   document.getElementById("panels").appendChild(wrapper);
 
@@ -48,9 +51,12 @@ function ensurePanel(label) {
     valX: wrapper.querySelector("[data-x]"),
     valY: wrapper.querySelector("[data-y]"),
     valZ: wrapper.querySelector("[data-z]"),
+    valV: wrapper.querySelector("[data-v]"),
+    valPeak: wrapper.querySelector("[data-peak]"),
     canvas,
     ctx: canvas.getContext("2d"),
     history: [],
+    peak: 0,
   };
   panels[label] = panel;
   return panel;
@@ -87,8 +93,20 @@ function handleSample(sample) {
   if (panel.history.length > MAX_TRACE_POINTS) panel.history.shift();
   drawTrace(panel);
 
+  const tracker = trackers[sample.sensor];
+  const result = tracker ? tracker.addSample(sample) : null;
+
+  if (result && result.isCalibrating) {
+    panel.valV.textContent = "cal…";
+  } else if (result) {
+    panel.valV.textContent = result.verticalVelocity.toFixed(2);
+    panel.peak = Math.max(panel.peak, Math.abs(result.verticalVelocity));
+    panel.valPeak.textContent = panel.peak.toFixed(2);
+  }
+
   if (state.recording.active) {
-    state.recording.buffer.push(sample);
+    const stored = result && !result.isCalibrating ? { ...sample, vVert: result.verticalVelocity } : sample;
+    state.recording.buffer.push(stored);
   }
 }
 
@@ -118,6 +136,7 @@ async function onConnectClick(label) {
   try {
     const result = await state.transport.addSensor(label);
     state.sensors[label] = result;
+    trackers[label] = MSProcessing.createTracker();
     button.textContent = `Disconnect (${label})`;
     button.dataset.connected = "true";
   } catch (err) {
@@ -131,6 +150,7 @@ async function onConnectClick(label) {
 function onDisconnectClick(label) {
   state.transport.disconnectSensor(label);
   state.sensors[label] = null;
+  delete trackers[label];
   const button = document.getElementById(`connect-${label}`);
   button.textContent = `Connect ${label[0].toUpperCase()}${label.slice(1)} Sensor`;
   button.dataset.connected = "false";
@@ -160,6 +180,7 @@ function updateSimulateToggleAvailability() {
 
 function onSimulateToggle(event) {
   state.transport = event.target.checked ? MSSim : MSBle;
+  document.getElementById("simulateScenario").disabled = !event.target.checked;
 }
 
 // --- Recording ---
@@ -184,6 +205,17 @@ function flush() {
 async function onStartRecording() {
   const labelInput = document.getElementById("sessionLabel");
   const sessionId = await MSStorage.createSession(labelInput.value, connectedSensorLabels());
+
+  // Pressing Start Recording is the user's deliberate "bar is racked,
+  // ready" signal — a more reliable moment to (re)calibrate orientation
+  // than connect time, when the sensor may still be getting attached.
+  for (const label of connectedSensorLabels()) {
+    if (trackers[label]) trackers[label].reset();
+    if (panels[label]) {
+      panels[label].peak = 0;
+      panels[label].valPeak.textContent = "—";
+    }
+  }
 
   state.recording.active = true;
   state.recording.sessionId = sessionId;
@@ -295,13 +327,16 @@ async function init() {
   document.getElementById("connect-right").addEventListener("click", () => onSensorButtonClick("right"));
 
   const simToggle = document.getElementById("simulateToggle");
+  const scenarioSelect = document.getElementById("simulateScenario");
   if (!bluetoothAvailable) {
     simToggle.checked = true;
     simToggle.disabled = true;
+    scenarioSelect.disabled = false;
     document.getElementById("bleWarning").hidden = false;
     state.transport = MSSim;
   }
   simToggle.addEventListener("change", onSimulateToggle);
+  scenarioSelect.addEventListener("change", (event) => MSSim.setScenario(event.target.value));
 
   document.getElementById("sessionLabel").value = defaultSessionLabel();
   document.getElementById("startRecording").addEventListener("click", onStartRecording);

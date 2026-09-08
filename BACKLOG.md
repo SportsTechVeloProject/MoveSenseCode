@@ -10,8 +10,34 @@ file currently does.
 - [x] Record a session to local storage (IndexedDB), batched writes
 - [x] Session history list, CSV export, delete
 - [x] Hardware-free "simulate sensors" mode for dev/demo without hardware
+- [x] Gyro-fused vertical velocity (`Website/JS/processing.js`) — rejects
+      bar rotation instead of misreading it as acceleration (confirmed:
+      raw accel alone can't tell "moved" from "rotated" — see real-data
+      analysis in git history / conversation). Madgwick IMU orientation
+      fusion + gravity removal + ZUPT + a slow velocity leak to bound
+      drift during sustained rotation. **Needs the real-hardware
+      verification below before this is trusted** — only validated so far
+      via `simulate.js`'s two scenarios.
 
 ## Hardware / BLE (`Website/JS/ble.js`)
+- [ ] **First real-hardware check for the new Gyro subscription**: the
+      binary layout of a Gyro notification over this specific GATT
+      protocol was *assumed* (same shape as Acc — timestamp + 3×float32),
+      not independently verified byte-for-byte. Watch the console for
+      "implausible gyro sample" warnings on first connect — if they fire
+      constantly, the byte-offset/unit assumption is wrong and needs
+      re-deriving from a raw hex dump of an actual notification.
+- [ ] With a sensor sitting still, confirm the live "V" readout settles
+      near 0 and stays there (exercises calibration + ZUPT on real noise
+      for the first time — noise characteristics used in `simulate.js`
+      are estimates, not measured from real hardware).
+- [ ] Manually spin one sensor in place (no translation) and confirm "V"
+      stays near-zero — the real-hardware equivalent of the "Rotation
+      only" simulated scenario, and the most important real-world
+      confirmation that the rotation fix actually works.
+- [ ] Record one real lift and one deliberate spin with this code and use
+      them as the new reference recordings (the old `session_1`/`session_5`
+      predate Gyro capture and can't validate this pipeline).
 - [ ] Test with both sensors in real training conditions (range, barbell
       movement, sensor knocks) — confirm no dropped notifications at 104Hz
 - [ ] Handle low battery / sensor power-off mid-session gracefully (right
@@ -23,20 +49,24 @@ file currently does.
       untested so far) — relevant if this ever needs to run on a tablet
       courtside instead of a laptop
 
-## Data processing — turning raw IMU data into a velocity/rep metric
-This is the biggest open gap: right now we store raw x/y/z accelerometer
-samples, nothing more. Needed before "feedback after doing the lift(s)"
-means anything.
-- [ ] Define the actual metric(s) we report (mean concentric velocity?
-      peak velocity? bar path?) — needs research input, see "Data
-      validity" below
-- [ ] Integrate acceleration → velocity (numerical integration, drift
-      correction — raw IMU integration drifts over time, will need either
-      zero-velocity resets between reps or a filtering approach)
-- [ ] Rep detection (segment a recording into individual reps)
-- [ ] Decide where this computation runs (client-side JS in a new
-      `Website/JS/processing.js`, matching the `src/processing` box in the
-      original architecture diagram)
+## Data processing (`Website/JS/processing.js`)
+Gyro-fused velocity is now built (see "Done" above), but every threshold
+in it is a generic starting point, not tuned against real recordings:
+- [ ] Tune ZUPT thresholds (`ZUPT_ACCEL_BAND`, `ZUPT_GYRO_MAX_DPS`,
+      `ZUPT_MIN_SAMPLES`) against real lift recordings — in particular
+      whether a real lift's grip-adjustment micro-rotation could falsely
+      suppress a real rest moment, or vice versa
+- [ ] Tune the velocity leak time constant (`VELOCITY_LEAK_TIME_CONSTANT_S`,
+      currently 2s) — long enough to not suppress a real rep's velocity
+      signal, short enough to bound drift during any sustained rotation
+      with no rest moment
+- [ ] Validate the whole pipeline against a reference measurement (see
+      "Data validity" below) — it's currently POC-grade, not accuracy-tested
+- [ ] Define the actual metric(s) we report beyond instantaneous/peak
+      vertical velocity (mean concentric velocity? full bar path?)
+- [ ] Rep detection (segment a recording into individual reps) — the ZUPT
+      rest-detection already in `processing.js` is a natural starting
+      point for finding rep boundaries
 
 ## UI/UX — the "layers" (connect → login → exercise → feedback)
 - [ ] Demote the current live-view panels to a collapsed/dev-only section
