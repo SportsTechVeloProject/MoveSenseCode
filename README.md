@@ -22,7 +22,7 @@ Tracks barbell velocity using two Movesense IMU sensors — one on each end of t
 </p>
 <p align="center"><sub>A mockup of where this is headed — this UI isn't built yet. See <a href="#current-status-proof-of-concept">current status</a> below.</sub></p>
 
-<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
+<p align="center">Or try it out by pressing the box bellow.</p>
 
 <p align="center">
   <a href="https://sportstechveloproject.github.io/MoveSenseCode/UI/">
