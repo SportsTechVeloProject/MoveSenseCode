@@ -11,7 +11,7 @@
 
 # MoveSense Barbell Velocity Tracker
 
-Tracks barbell velocity using two Movesense IMU sensors — one on each end of the bar — over Bluetooth. Built as a project for the **KTH Sports Technology HT26** course.
+Tracks barbell velocity in real time using two Movesense IMU sensors — one mounted on each end of the bar — connected over Bluetooth. Built as a project for the **KTH Sports Technology HT26** course.
 
 <p align="center">
   <img src="docs/features-strip (1).svg" alt="Key features: dual IMU sync, live data view, CSV export, no backend needed" width="100%">
@@ -22,7 +22,7 @@ Tracks barbell velocity using two Movesense IMU sensors — one on each end of t
 </p>
 <p align="center"><sub>A mockup of where this is headed — this UI isn't built yet. See <a href="#current-status-proof-of-concept">current status</a> below.</sub></p>
 
-<p align="center">Or try it out by pressing the box bellow.</p>
+<p align="center">Or skip straight to trying it — no setup, just click below.</p>
 
 <p align="center">
   <a href="https://sportstechveloproject.github.io/MoveSenseCode/UI/">
@@ -36,23 +36,25 @@ Tracks barbell velocity using two Movesense IMU sensors — one on each end of t
 
 ## Current status: proof of concept
 
-`UI/` is a working proof of concept for the bottom half of the architecture diagram above (`src/ble` → `src/storage`, roughly). It runs entirely in the browser:
+`UI/` is a working proof of concept for the data-capture side of the app — connecting sensors, watching live readings, and getting the data out. It runs entirely in the browser, no install required:
 
 - Connect two Movesense sensors
-- Watch live IMU data
+- Watch live IMU data as it streams in
 - Record a session
 - Export it as CSV
 
-No backend, no server process, nothing to keep running in the background.
+No backend, no server process, nothing to keep running in the background — close the tab and everything's still saved locally.
 
 > **Not built yet:** exercise selection, velocity/feedback processing, a polished results view, or accounts (login, coach/student roles).
-> See [`BACKLOG.md`](BACKLOG.md) for the task breakdown.
+> See [`BACKLOG.md`](BACKLOG.md) for the full task breakdown.
 
 <p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
 ## Running it
 
-Web Bluetooth requires a secure context (`https://` or `localhost`) and only works in **Chromium browsers — Chrome or Edge** (not Safari or Firefox). Opening the HTML file directly (`file://`) will not work.
+Prefer not to set anything up locally? Use the **Launch App** button above — it's the same code, already deployed.
+
+To run it yourself: Web Bluetooth requires a secure context (`https://` or `localhost`) and only works in **Chromium browsers — Chrome or Edge** (Safari and Firefox don't support it). Opening the HTML file directly (`file://`) won't work either.
 
 ```bash
 python -m http.server 8090 --directory UI
@@ -60,13 +62,13 @@ python -m http.server 8090 --directory UI
 
 Then open [`http://localhost:8090`](http://localhost:8090) in Chrome or Edge.
 
-There's also a **"Use simulated sensors"** checkbox on the page for developing or demoing without any Movesense hardware nearby — it generates fake but plausible accelerometer data through the exact same code path as real sensors.
+No Movesense hardware on hand? Tick the **"Use simulated sensors"** checkbox on the page — it generates fake but plausible accelerometer data through the exact same code path as real sensors, so you can develop or demo without a bar nearby.
 
 <p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
 ## Repo layout
 
-### `UI/` — the actual product (this is what's being developed)
+### `UI/` — the actual product, and where active development happens
 
 | File | Purpose |
 |---|---|
@@ -76,7 +78,7 @@ There's also a **"Use simulated sensors"** checkbox on the page for developing o
 | `JS/storage.js` | IndexedDB layer — all local, no server. Two stores: `sessions` (one row per recording) and `samples` (one row per IMU reading, tagged by session and sensor). Also builds the CSV export string. |
 | `JS/app.js` | UI state and orchestration. Funnels samples from whichever transport is active into the live view, and (while recording) into a batched write buffer flushed to `storage.js` every 500ms. Owns no BLE or IndexedDB details itself — those stay in `ble.js` / `storage.js`. |
 
-### Legacy / reference (not used by `UI/`, kept for reference)
+### Legacy / reference — not used by `UI/`, but kept around for context
 
 | File | Purpose |
 |---|---|
@@ -88,9 +90,9 @@ There's also a **"Use simulated sensors"** checkbox on the page for developing o
 
 ## Architecture notes for the team
 
-- **No backend yet.** Everything currently lives in the browser (IndexedDB), scoped to one device. This is intentional for the POC phase, but it means recorded sessions don't sync across devices or users — that requires a real backend + auth, which is planned but not started (see [`BACKLOG.md`](BACKLOG.md)).
-- **Data shape:** a `sample` is always `{ sensor, device, t, x, y, z }` (plus `recvAt` once persisted), regardless of whether it came from a real sensor or the simulator — anything consuming samples should rely on that shape, not on which transport produced them.
-- **No build tooling on purpose** — no npm, no bundler. Keep it plain HTML/CSS/JS unless a real need for one shows up; it keeps the barrier to contributing near zero.
+- **No backend yet.** Everything currently lives in the browser (IndexedDB), scoped to one device. That's intentional for the proof-of-concept phase, but it does mean recorded sessions don't sync across devices or users — real sync needs a backend + auth, which is planned but not started (see [`BACKLOG.md`](BACKLOG.md)).
+- **Data shape stays consistent.** A `sample` is always `{ sensor, device, t, x, y, z }` (plus `recvAt` once persisted), whether it came from a real sensor or the simulator — anything consuming samples should rely on that shape, not on which transport produced them.
+- **No build tooling, on purpose.** No npm, no bundler — just plain HTML/CSS/JS, unless a real need for one shows up. Keeps the barrier to contributing close to zero.
 
 <p align="center">
   <img src="docs/footer-banner.svg" alt="KTH Sports Technology HT26" width="100%">
