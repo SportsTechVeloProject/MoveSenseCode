@@ -24,6 +24,16 @@ Tracks barbell velocity using two Movesense IMU sensors — one on each end of t
 
 <p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
+<p align="center">
+  <a href="https://sportstechveloproject.github.io/MoveSenseCode/UI/">
+    <img src="https://img.shields.io/badge/-%E2%96%B6%20Launch%20App-2DD4BF?style=for-the-badge&labelColor=2DD4BF" alt="Launch App">
+  </a>
+  <br>
+  <sub>Opens directly in your browser — requires Chrome or Edge for Web Bluetooth</sub>
+</p>
+
+<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
+
 ## Current status: proof of concept
 
 `UI/` is a working proof of concept for the bottom half of the architecture diagram above (`src/ble` → `src/storage`, roughly). It runs entirely in the browser:
