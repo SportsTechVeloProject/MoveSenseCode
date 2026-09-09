@@ -1,0 +1,35 @@
+name: Deploy UI to GitHub Pages
+
+on:
+  push:
+    branches:
+      - readme-redesign   # change this to whichever branch you want to deploy from
+  workflow_dispatch:        # lets you trigger a deploy manually from the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload UI folder as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: UI
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
