@@ -32,7 +32,7 @@ Tracks barbell velocity in real time using two Movesense IMU sensors — one mou
   <sub>Opens directly in your browser — requires Chrome or Edge for Web Bluetooth</sub>
 </p>
 
-<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (2).svg" alt="" width="100%"></p>
 
 ## Current status: proof of concept
 
@@ -48,7 +48,7 @@ No backend, no server process, nothing to keep running in the background — clo
 > **Not built yet:** exercise selection, velocity/feedback processing, a polished results view, or accounts (login, coach/student roles).
 > See [`BACKLOG.md`](BACKLOG.md) for the full task breakdown.
 
-<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (2).svg" alt="" width="100%"></p>
 
 ## Running it
 
@@ -64,7 +64,7 @@ Then open [`http://localhost:8090`](http://localhost:8090) in Chrome or Edge.
 
 No Movesense hardware on hand? Tick the **"Use simulated sensors"** checkbox on the page — it generates fake but plausible accelerometer data through the exact same code path as real sensors, so you can develop or demo without a bar nearby.
 
-<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (2).svg" alt="" width="100%"></p>
 
 ## Repo layout
 
@@ -86,7 +86,7 @@ No Movesense hardware on hand? Tick the **"Use simulated sensors"** checkbox on 
 | `movesense_bridge.py` | Python BLE-to-WebSocket bridge for a single sensor — an earlier architecture where a local Python process relayed sensor data to the browser. Superseded by direct Web Bluetooth (no background process needed), kept as an optional dev/debug tool. |
 | `movesense_brigeMulti.py` | Same idea as above, extended to multiple sensors. Also superseded, also kept for reference. |
 
-<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (2).svg" alt="" width="100%"></p>
 
 ## Architecture notes for the team
 
