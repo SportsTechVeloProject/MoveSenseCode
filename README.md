@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-proof--of--concept-22D3EE?style=flat-square&labelColor=0B1120">
-  <img src="https://img.shields.io/badge/browser-Chrome%20%7C%20Edge-34D399?style=flat-square&labelColor=0B1120">
-  <img src="https://img.shields.io/badge/backend-none%20(browser--only)-60A5FA?style=flat-square&labelColor=0B1120">
-  <img src="https://img.shields.io/badge/KTH-Sports%20Technology%20HT26-8892A6?style=flat-square&labelColor=0B1120">
+  <img src="https://img.shields.io/badge/status-proof--of--concept-22D3EE?style=flat-square&labelColor=1F2937&color=22D3EE&logoColor=white">
+  <img src="https://img.shields.io/badge/browser-Chrome%20%7C%20Edge-34D399?style=flat-square&labelColor=1F2937&color=34D399">
+  <img src="https://img.shields.io/badge/backend-none%20(browser--only)-60A5FA?style=flat-square&labelColor=1F2937&color=60A5FA">
+  <img src="https://img.shields.io/badge/KTH-Sports%20Technology%20HT26-8892A6?style=flat-square&labelColor=1F2937&color=8892A6">
 </p>
 
 # MoveSense Barbell Velocity Tracker
