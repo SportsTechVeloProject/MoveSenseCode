@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/32009129/README.md)
 <p align="center">
   <img src="docs/banner.svg" alt="MoveSense Barbell Velocity Tracker banner" width="100%">
 </p>
