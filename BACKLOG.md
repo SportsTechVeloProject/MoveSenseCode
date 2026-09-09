@@ -48,8 +48,31 @@ file currently does.
       upward movement) while still passing every synthetic scenario.
       **Still only validated against one recording, one lifter, one
       exercise** — see Data processing below.
+- [x] **Second real recording (3 squats, second one deliberately fast)
+      confirms the tuned thresholds generalize**: the right sensor
+      correctly counted exactly 3 reps, and rep durations/peaks matched
+      the described tempo (a 0.71s/2.09 m/s "quick" rep against 1.18-2.25s
+      slower ones) — the first, longest rep also coincided with the bar
+      being held at the hip instead of on the back, a real mechanical
+      difference (much larger accel/gyro swings), not sensor noise.
 
 ## Hardware / BLE (`Website/JS/ble.js`)
+- [ ] **Left sensor lost most of its reps in that second recording** —
+      traced to 5 gaps of 0.8-1.1s in the sensor's own device timestamp
+      within an 8-second window, while wall-clock reception stayed
+      normal (60-90ms between receipts) — a real gap in what the sensor
+      recorded, not a network delay, and too short to be a full BLE
+      disconnect/reconnect cycle (no reconnect event would fire that
+      fast). `processing.js` currently treats *any* gap over
+      `MAX_DT_S=0.25s` as "must fully reset and recalibrate," which
+      discards whatever rep was in progress each time — likely why left
+      only registered 1 rep against right's 3 on the same set. Proposed
+      fix (not yet implemented): distinguish a real reconnect (large gap,
+      full reset justified) from a brief mid-connection hiccup like this
+      one (skip integrating across the bad gap but keep the tracker's
+      velocity/orientation state instead of discarding it) — raise the
+      full-reset threshold to ~2s and handle 0.25-2s gaps by skipping the
+      one bad step only.
 - [x] **Gyro subscription binary layout confirmed working on real
       hardware** — a real recording (3 squats, both sensors) came back
       with sane, correctly-parsed gx/gy/gz values throughout, no
