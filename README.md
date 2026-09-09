@@ -14,14 +14,14 @@
 Tracks barbell velocity using two Movesense IMU sensors — one on each end of the bar — over Bluetooth. Built as a project for the **KTH Sports Technology HT26** course.
 
 <p align="center">
-  <img src="docs/features-strip.svg" alt="Key features: dual IMU sync, live data view, CSV export, no backend needed" width="100%">
+  <img src="docs/features-strip (1).svg" alt="Key features: dual IMU sync, live data view, CSV export, no backend needed" width="100%">
 </p>
 
 <p align="center">
   <img src="docs/architecture.svg" alt="Architecture: IMU sensors through Web Bluetooth, local storage, planned processing/backend/screens" width="85%">
 </p>
 
-<p align="center"><img src="docs/divider.svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
 ## Current status: proof of concept
 
@@ -37,7 +37,7 @@ No backend, no server process, nothing to keep running in the background.
 > **Not built yet:** exercise selection, velocity/feedback processing, a polished results view, or accounts (login, coach/student roles).
 > See [`BACKLOG.md`](BACKLOG.md) for the task breakdown.
 
-<p align="center"><img src="docs/divider.svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
 ## Running it
 
@@ -51,7 +51,7 @@ Then open [`http://localhost:8090`](http://localhost:8090) in Chrome or Edge.
 
 There's also a **"Use simulated sensors"** checkbox on the page for developing or demoing without any Movesense hardware nearby — it generates fake but plausible accelerometer data through the exact same code path as real sensors.
 
-<p align="center"><img src="docs/divider.svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
 ## Repo layout
 
@@ -73,7 +73,7 @@ There's also a **"Use simulated sensors"** checkbox on the page for developing o
 | `movesense_bridge.py` | Python BLE-to-WebSocket bridge for a single sensor — an earlier architecture where a local Python process relayed sensor data to the browser. Superseded by direct Web Bluetooth (no background process needed), kept as an optional dev/debug tool. |
 | `movesense_brigeMulti.py` | Same idea as above, extended to multiple sensors. Also superseded, also kept for reference. |
 
-<p align="center"><img src="docs/divider.svg" alt="" width="100%"></p>
+<p align="center"><img src="docs/divider (1).svg" alt="" width="100%"></p>
 
 ## Architecture notes for the team
 
