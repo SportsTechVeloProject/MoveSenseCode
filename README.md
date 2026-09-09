@@ -16,10 +16,11 @@ session, export it as CSV. No backend, no server process, nothing to keep
 running in the background.
 
 **Not built yet**: exercise selection, a polished results/feedback view,
-or accounts (login, coach/student roles). The velocity computation itself
-is built but **unvalidated on real hardware** — see
-[BACKLOG.md](BACKLOG.md) for what still needs checking before it's
-trusted, and for the rest of the task breakdown.
+or accounts (login, coach/student roles). The velocity/rep-detection
+pipeline has been tuned against one real recording (see
+[scripts/replay-samples.html](scripts/replay-samples.html)) but not yet
+validated broadly — see [BACKLOG.md](BACKLOG.md) for what still needs
+checking before it's trusted, and for the rest of the task breakdown.
 
 ## Running it
 
@@ -47,10 +48,16 @@ real sensors.
 | `index.html` | Entry point: markup, dark-theme styling, and the `<script>` tags that wire everything together. |
 | `JS/ble.js` | Real Web Bluetooth transport. Connects directly to Movesense sensors — GATT service discovery, subscribe/notify, parses raw accelerometer *and gyroscope* notifications (Gyro subscribed alongside Acc, tagged with a separate reference ID — Web Bluetooth's "multi-subscription" pattern). Handles auto-reconnect if a sensor drops. One `requestDevice()` call per sensor (a Web Bluetooth limitation — the browser can't multi-select), so there are two "Connect Left/Right Sensor" buttons rather than one. |
 | `JS/simulate.js` | Fake sensor transport with the *same interface* as `ble.js` (`addSensor`/`disconnectSensor`/`setSampleHandler`), so the rest of the app can't tell the difference. Three selectable scenarios: a real-lift vertical pulse, a pure-rotation spin (no translation — proves `processing.js` rejects rotation), and a squat-like descend-then-ascend cycle (proves `reps.js` excludes the downward phase). |
-| `JS/processing.js` | Turns raw accel+gyro samples into a world-frame vertical velocity estimate. Raw accelerometer alone can't tell "the bar moved" from "the bar rotated" (confirmed on real recordings — rotation keeps acceleration *magnitude* ~constant while individual axes swing). Fuses gyro+accel via a Madgwick IMU-only filter to track orientation, rotates acceleration into a fixed world frame before removing gravity, then integrates to velocity with drift correction (ZUPT + a slow velocity leak). **POC-grade — built and verified against simulated data only, not yet validated on real hardware or against a reference measurement.** |
-| `JS/reps.js` | Turns that velocity signal into discrete rep events, measuring "top speed" only during the concentric (upward) phase — the downward phase, whether a controlled eccentric lower or a dropped bar, is excluded with no exercise-specific logic (both are just sustained negative velocity). Reports peak/mean/median velocity per rep. Also POC-grade, same caveats as `processing.js`. |
+| `JS/processing.js` | Turns raw accel+gyro samples into a world-frame vertical velocity estimate. Raw accelerometer alone can't tell "the bar moved" from "the bar rotated" (confirmed on real recordings — rotation keeps acceleration *magnitude* ~constant while individual axes swing). Fuses gyro+accel via a Madgwick IMU-only filter to track orientation, rotates acceleration into a fixed world frame before removing gravity, then integrates to velocity with drift correction — ZUPT (rest detection, accel-magnitude-based; gyro is deliberately excluded from this, see comments in the file) plus a slow velocity leak. **POC-grade — tuned against one real recording so far, not against a reference measurement.** |
+| `JS/reps.js` | Turns that velocity signal into discrete rep events, measuring "top speed" only during the concentric (upward) phase — the downward phase, whether a controlled eccentric lower or a dropped bar, is excluded with no exercise-specific logic (both are just sustained negative velocity). Reports peak/mean/median velocity per rep, plus a `truncated` flag for a phase that hit `MAX_PHASE_DURATION_S` without ending naturally. Same POC-grade caveat as `processing.js`. |
 | `JS/storage.js` | IndexedDB layer — all local, no server. Two stores: `sessions` (one row per recording) and `samples` (one row per IMU reading: raw accel/gyro plus the computed vertical velocity, tagged by session and sensor). Also builds the CSV export string. |
 | `JS/app.js` | UI state and orchestration. Funnels samples from whichever transport is active through a per-sensor `processing.js` tracker into the live view (readout + peak velocity), and (while recording) into a batched write buffer flushed to `storage.js` every 500ms. Owns no BLE/IndexedDB/fusion-math details itself — those stay in `ble.js`/`storage.js`/`processing.js`. |
+
+### `scripts/` — dev tools (not part of the shipped site)
+
+| File | Purpose |
+|---|---|
+| `replay-samples.html` | Replays a session's exported sample CSV through fresh copies of `processing.js`/`reps.js`, to check whether a threshold change actually works on a **real** recording instead of only `simulate.js`'s synthetic scenarios. Open it directly in a browser (no server needed) and pick a CSV file exported from the site. This is how the ZUPT/rep-detection thresholds got tuned — see `BACKLOG.md` and use it again whenever those thresholds change or a new real recording comes in. |
 
 ### Legacy / reference (not used by `Website/`, kept for reference)
 

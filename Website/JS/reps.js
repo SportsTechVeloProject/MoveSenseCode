@@ -29,8 +29,21 @@ const MSReps = (() => {
   const EXIT_DOWN_VELOCITY_MPS = -0.02;
   const CONFIRM_SAMPLES = 5; // ~48ms @104Hz, consecutive samples required to ENTER a phase
   const MIN_REP_DURATION_S = 0.1;
-  const MIN_REP_PEAK_MPS = 0.15;
+  // 0.4, not 0.15: replaying a real recording (scripts/replay-samples.html)
+  // showed a clear noise floor of small spurious peaks (0.15-0.3 m/s) sitting
+  // well below the real reps' peaks (0.5-1.4 m/s) — 0.4 sits in the gap
+  // between them. Still just a starting point tuned against one recording,
+  // one lifter, one exercise — expect to revisit per BACKLOG.md.
+  const MIN_REP_PEAK_MPS = 0.4;
   const LOOKBACK_SIZE = CONFIRM_SAMPLES;
+
+  // Backstop against a phase getting stuck open (e.g. processing.js's
+  // rest-detector failing to fire promptly during a real held-still-but-
+  // wobbling moment) regardless of why — independent of getting ZUPT
+  // thresholds exactly right. Real clean reps topped out at 0.66s in
+  // testing; velocity-based-training literature treats >2-2.5s concentric
+  // as failed/grinding, giving a ceiling with margin on both sides.
+  const MAX_PHASE_DURATION_S = 2.5;
 
   function median(values) {
     const sorted = values.slice().sort((a, b) => a - b);
@@ -45,6 +58,7 @@ const MSReps = (() => {
     let lookback = []; // last LOOKBACK_SIZE {t, v} samples, always maintained
     let repIndex = 0;
     let current = null; // { startT, endT, peak, sum, count, velocities[] } while ascending
+    let descendingStartT = null;
 
     function reset() {
       phase = "resting";
@@ -53,6 +67,7 @@ const MSReps = (() => {
       lookback = [];
       repIndex = 0;
       current = null;
+      descendingStartT = null;
     }
 
     function pushLookback(t, v) {
@@ -72,7 +87,7 @@ const MSReps = (() => {
       };
     }
 
-    function finalizeAscending() {
+    function finalizeAscending(truncated) {
       const rec = current;
       current = null;
       if (!rec) return null;
@@ -88,6 +103,7 @@ const MSReps = (() => {
         meanVelocity: rec.sum / rec.count,
         medianVelocity: median(rec.velocities),
         sampleCount: rec.count,
+        truncated: !!truncated,
       };
     }
 
@@ -106,7 +122,7 @@ const MSReps = (() => {
       pushLookback(t, v);
 
       if (isResting) {
-        const finalized = phase === "ascending" ? finalizeAscending() : null;
+        const finalized = phase === "ascending" ? finalizeAscending(false) : null;
         phase = "resting";
         clearPending();
         return finalized;
@@ -114,7 +130,13 @@ const MSReps = (() => {
 
       if (phase === "ascending") {
         if (v <= EXIT_UP_VELOCITY_MPS) {
-          const finalized = finalizeAscending();
+          const finalized = finalizeAscending(false);
+          phase = "resting";
+          clearPending();
+          return finalized;
+        }
+        if (t - current.startT > MAX_PHASE_DURATION_S) {
+          const finalized = finalizeAscending(true);
           phase = "resting";
           clearPending();
           return finalized;
@@ -128,7 +150,7 @@ const MSReps = (() => {
       }
 
       if (phase === "descending") {
-        if (v >= EXIT_DOWN_VELOCITY_MPS) {
+        if (v >= EXIT_DOWN_VELOCITY_MPS || t - descendingStartT > MAX_PHASE_DURATION_S) {
           phase = "resting";
           clearPending();
         }
@@ -152,6 +174,7 @@ const MSReps = (() => {
         phase = instant;
         clearPending();
         if (phase === "ascending") startAscendingFromLookback();
+        if (phase === "descending") descendingStartT = lookback[0].t;
       }
       return null;
     }

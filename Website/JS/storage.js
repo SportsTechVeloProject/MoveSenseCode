@@ -136,6 +136,7 @@ const MSStorage = (() => {
           meanVelocity: rep.meanVelocity,
           medianVelocity: rep.medianVelocity,
           sampleCount: rep.sampleCount,
+          truncated: rep.truncated,
         });
       }
       tx.oncomplete = () => resolve();
@@ -245,10 +246,10 @@ const MSStorage = (() => {
   }
 
   function toRepsCsv(reps) {
-    const header = "sessionId,sensor,repIndex,startT,endT,duration,peakVelocity,meanVelocity,medianVelocity,sampleCount";
+    const header = "sessionId,sensor,repIndex,startT,endT,duration,peakVelocity,meanVelocity,medianVelocity,sampleCount,truncated";
     const rows = reps.map(
       (r) =>
-        `${r.sessionId},${r.sensor},${r.repIndex},${r.startT},${r.endT},${r.duration},${r.peakVelocity},${r.meanVelocity},${r.medianVelocity},${r.sampleCount}`
+        `${r.sessionId},${r.sensor},${r.repIndex},${r.startT},${r.endT},${r.duration},${r.peakVelocity},${r.meanVelocity},${r.medianVelocity},${r.sampleCount},${r.truncated}`
     );
     return [header, ...rows].join("\n");
   }

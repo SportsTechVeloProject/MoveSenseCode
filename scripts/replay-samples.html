@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Replay Samples — dev tool</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #14181c; color: #e6e9ec; padding: 32px; }
+  h1 { font-size: 18px; }
+  p.hint { color: #7d8792; font-size: 13px; max-width: 640px; }
+  input[type="file"] { margin: 16px 0; color: #e6e9ec; }
+  table { border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+  th, td { border: 1px solid #2a3038; padding: 6px 10px; text-align: left; }
+  th { color: #7d8792; }
+  .truncated { color: #d68a5f; font-weight: 600; }
+  h2 { font-size: 15px; margin-top: 32px; }
+  .summary { font-size: 13px; color: #7d8792; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+  <h1>Replay Samples</h1>
+  <p class="hint">
+    Dev tool: replays a session's exported sample CSV (the file from the site's
+    "Export CSV" button, columns <code>sessionId,sensor,t,recvAt,x,y,z,gx,gy,gz,vVert,phase,repIndex</code>)
+    through <strong>fresh</strong> copies of <code>processing.js</code>'s tracker and
+    <code>reps.js</code>'s rep detector, ignoring the file's own stale
+    <code>vVert</code>/<code>phase</code>/<code>repIndex</code> columns. Use this to check whether a
+    threshold change actually fixes a real recording, instead of only testing against
+    <code>simulate.js</code>'s synthetic scenarios. Open this file directly (no server needed —
+    it doesn't touch Web Bluetooth or IndexedDB).
+  </p>
+  <input type="file" id="fileInput" accept=".csv" />
+  <div id="output"></div>
+
+  <script src="../Website/JS/processing.js"></script>
+  <script src="../Website/JS/reps.js"></script>
+  <script>
+    function parseCsv(text) {
+      const lines = text.trim().split(/\r?\n/);
+      const header = lines[0].split(",");
+      return lines.slice(1).map((line) => {
+        const cells = line.split(",");
+        const row = {};
+        header.forEach((key, i) => (row[key] = cells[i]));
+        return row;
+      });
+    }
+
+    function num(value) {
+      const n = parseFloat(value);
+      return Number.isFinite(n) ? n : undefined;
+    }
+
+    function replaySensor(rows) {
+      const sorted = rows.slice().sort((a, b) => num(a.t) - num(b.t));
+      const tracker = MSProcessing.createTracker();
+      const detector = MSReps.createRepDetector();
+
+      const finalizedReps = [];
+      const phaseLog = [];
+      let lastPhase = null;
+      let phaseStartT = null;
+      let maxPhaseDuration = 0;
+
+      for (const row of sorted) {
+        const sample = {
+          t: num(row.t),
+          x: num(row.x),
+          y: num(row.y),
+          z: num(row.z),
+          gx: num(row.gx),
+          gy: num(row.gy),
+          gz: num(row.gz),
+        };
+        const result = tracker.addSample(sample);
+        const repEvent = detector.addSample(result);
+        if (repEvent) finalizedReps.push(repEvent);
+
+        const live = detector.getLiveState();
+        if (live.phase !== lastPhase) {
+          if (lastPhase !== null && phaseStartT !== null) {
+            maxPhaseDuration = Math.max(maxPhaseDuration, sample.t - phaseStartT);
+          }
+          phaseLog.push({ t: sample.t, phase: live.phase });
+          lastPhase = live.phase;
+          phaseStartT = sample.t;
+        }
+      }
+
+      return { finalizedReps, phaseLog, maxPhaseDuration };
+    }
+
+    function render(sensor, result) {
+      const div = document.createElement("div");
+      const repRows = result.finalizedReps
+        .map(
+          (r) => `
+        <tr class="${r.truncated ? "truncated" : ""}">
+          <td>${r.repIndex}</td>
+          <td>${r.startT.toFixed(2)}</td>
+          <td>${r.duration.toFixed(2)}</td>
+          <td>${r.peakVelocity.toFixed(3)}</td>
+          <td>${r.meanVelocity.toFixed(3)}</td>
+          <td>${r.medianVelocity.toFixed(3)}</td>
+          <td>${r.truncated ? "TRUNCATED" : ""}</td>
+        </tr>`
+        )
+        .join("");
+
+      div.innerHTML = `
+        <h2>${sensor}</h2>
+        <div class="summary">
+          ${result.finalizedReps.length} finalized rep(s) &middot;
+          max phase duration seen: ${result.maxPhaseDuration.toFixed(2)}s
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>startT</th><th>duration</th><th>peak</th><th>mean</th><th>median</th><th></th></tr></thead>
+          <tbody>${repRows || "<tr><td colspan=7>none</td></tr>"}</tbody>
+        </table>
+      `;
+      document.getElementById("output").appendChild(div);
+    }
+
+    document.getElementById("fileInput").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById("output").innerHTML = "";
+        const rows = parseCsv(reader.result);
+        const bySensor = {};
+        for (const row of rows) {
+          if (!bySensor[row.sensor]) bySensor[row.sensor] = [];
+          bySensor[row.sensor].push(row);
+        }
+        for (const sensor of Object.keys(bySensor)) {
+          render(sensor, replaySensor(bySensor[sensor]));
+        }
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>

@@ -35,16 +35,38 @@ const MSProcessing = (() => {
   const MADGWICK_BETA = 0.1; // standard IMU-only starting gain
   const GRAVITY = 9.80665;
   const ACCEL_REJECT_BAND = 3.0; // m/s^2 — beyond this, skip accel correction
-  const ZUPT_ACCEL_BAND = 0.3; // m/s^2 around GRAVITY
-  const ZUPT_GYRO_MAX_DPS = 5; // deg/s
-  const ZUPT_MIN_SAMPLES = 8; // ~75ms @104Hz
+
+  // ZUPT (zero-velocity update) rest gate: deliberately accel-only, no
+  // gyro condition. Confirmed on a real recording that a loaded, actively
+  // held barbell wobbles a great deal (median gyro magnitude 15-17 deg/s,
+  // p90 100-180 deg/s) even while translationally still — higher than the
+  // 90 deg/s constant spin rate the "rotation" simulate.js scenario uses
+  // to prove rotation-rejection, so no fixed gyro threshold can include
+  // real rest and exclude that rotation test at the same time. Gyro is
+  // still fully used for orientation fusion below — only removed from
+  // this rest gate. Accel magnitude is the reliable signal instead: it
+  // swings 4+ m/s^2 from gravity during real dynamic rep motion but stays
+  // centered near gravity while translationally still (even while
+  // wobbling) — 1.0 here is >4x tighter than that real dynamic range, and
+  // still well inside ACCEL_REJECT_BAND's "near-static" convention above.
+  const ZUPT_ACCEL_BAND = 1.0; // m/s^2 around GRAVITY
+  // 32 samples (~308ms @104Hz), not 8 (~75ms): dropping gyro from the rest
+  // gate makes accel-near-gravity crossings much more common (they happen
+  // briefly at any local velocity extremum, not just at genuine rest), so
+  // a short confirm window was firing mid-rep and fragmenting one real
+  // squat into several small ones. Confirmed empirically by replaying a
+  // real recording (scripts/replay-samples.html): 8 samples fragmented 3
+  // real squats into 9-10 spurious reps per sensor; 32 samples cleanly
+  // resolved to 4 consistent, cross-sensor-matching reps (3 squats + the
+  // bar being un-racked beforehand, itself a genuine upward movement).
+  const ZUPT_MIN_SAMPLES = 32;
   const MAX_DT_S = 0.25; // gap bigger than this (e.g. reconnect) -> reset
 
-  // ZUPT can only fire when the sensor is genuinely still (low gyro too) —
-  // it CANNOT catch drift while the bar is rotating but not translating,
-  // since gyro is nonzero by definition the whole time. Sensor noise still
-  // integrates into velocity during a sustained spin with no rest moment.
-  // A slow velocity leak (exponential decay toward zero) bounds that drift
+  // ZUPT firing depends on genuine translational stillness (see accel-only
+  // rest gate above) — it can still fail to fire for a while during real
+  // held-still-but-wobbling moments, or during sustained rotation with no
+  // rest moment at all. A slow velocity leak (exponential decay toward
+  // zero) bounds drift in either case
   // without materially affecting a real ~1s lift pulse — the time constant
   // is long compared to one rep, short compared to a multi-second spin.
   //
@@ -229,8 +251,7 @@ const MSProcessing = (() => {
       ];
 
       const accelMag = Math.sqrt(x * x + y * y + z * z);
-      const gyroMag = Math.sqrt(gx * gx + gy * gy + gz * gz);
-      const atRestNow = Math.abs(accelMag - GRAVITY) < ZUPT_ACCEL_BAND && gyroMag < ZUPT_GYRO_MAX_DPS;
+      const atRestNow = Math.abs(accelMag - GRAVITY) < ZUPT_ACCEL_BAND;
       if (atRestNow) {
         restCount += 1;
         if (restCount === ZUPT_MIN_SAMPLES) {
