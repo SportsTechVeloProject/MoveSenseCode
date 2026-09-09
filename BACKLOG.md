@@ -17,7 +17,16 @@ file currently does.
       fusion + gravity removal + ZUPT + a slow velocity leak to bound
       drift during sustained rotation. **Needs the real-hardware
       verification below before this is trusted** — only validated so far
-      via `simulate.js`'s two scenarios.
+      via `simulate.js`'s three scenarios.
+- [x] Concentric-only rep detection (`Website/JS/reps.js`) — measures
+      "top speed" only during the upward phase of a lift, excluding the
+      downward phase (descent or a dropped bar — both are just sustained
+      negative velocity, no special-case logic needed for either) and
+      noise. Peak/mean/median velocity per rep, live phase indicator,
+      separate reps CSV export. Verified via the new `simulate.js`
+      "squat" scenario: exactly one rep per descend-then-ascend cycle,
+      zero reps from the descend half, zero phantom reps from pure noise
+      or from the rotation-only scenario.
 
 ## Hardware / BLE (`Website/JS/ble.js`)
 - [ ] **First real-hardware check for the new Gyro subscription**: the
@@ -57,16 +66,29 @@ in it is a generic starting point, not tuned against real recordings:
       whether a real lift's grip-adjustment micro-rotation could falsely
       suppress a real rest moment, or vice versa
 - [ ] Tune the velocity leak time constant (`VELOCITY_LEAK_TIME_CONSTANT_S`,
-      currently 2s) — long enough to not suppress a real rep's velocity
-      signal, short enough to bound drift during any sustained rotation
-      with no rest moment
+      currently 20s — raised from an initial 2s after testing showed a
+      short leak doesn't just decay drift, it measurably distorts a real
+      push-then-decel pulse: a leaky integrator doesn't exactly cancel an
+      antisymmetric pulse, since the leak bleeds off some of the push-
+      phase gain before the decel phase can cancel it, leaving a real
+      residual velocity that briefly registered as a second, spurious rep
+      in `reps.js` testing) — still needs real-hardware tuning to confirm
+      20s is right, not just plausible on synthetic data
+- [ ] Tune `reps.js`'s thresholds (`ENTER_VELOCITY_MPS`, exit thresholds,
+      `CONFIRM_SAMPLES`, `MIN_REP_DURATION_S`, `MIN_REP_PEAK_MPS`) against
+      real lift recordings — a very slow "grinding" concentric near a 1RM
+      could sit close to `MIN_REP_PEAK_MPS` and risk being discarded, and
+      real turnaround noise at the bottom of a squat or top of a press
+      might need a wider deadband than synthetic data suggests
+- [ ] Calibration/first-motion interaction: the tracker requires ~500ms
+      of stillness at Start Recording to calibrate orientation — starting
+      a lift's first rep before that window closes means the early part
+      of that rep is missed (confirmed on synthetic data: a scenario with
+      no lead-in rest lost its first rep to calibration truncation, one
+      with a lead-in rest didn't). Worth a brief "hold still" prompt in
+      the UI once real screens exist, so this isn't a silent gotcha.
 - [ ] Validate the whole pipeline against a reference measurement (see
       "Data validity" below) — it's currently POC-grade, not accuracy-tested
-- [ ] Define the actual metric(s) we report beyond instantaneous/peak
-      vertical velocity (mean concentric velocity? full bar path?)
-- [ ] Rep detection (segment a recording into individual reps) — the ZUPT
-      rest-detection already in `processing.js` is a natural starting
-      point for finding rep boundaries
 
 ## UI/UX — the "layers" (connect → login → exercise → feedback)
 - [ ] Demote the current live-view panels to a collapsed/dev-only section

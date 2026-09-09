@@ -47,7 +47,17 @@ const MSProcessing = (() => {
   // A slow velocity leak (exponential decay toward zero) bounds that drift
   // without materially affecting a real ~1s lift pulse — the time constant
   // is long compared to one rep, short compared to a multi-second spin.
-  const VELOCITY_LEAK_TIME_CONSTANT_S = 2.0;
+  //
+  // Must be long relative to a single rep's duration: a leaky integrator
+  // does NOT exactly cancel an antisymmetric push-then-decel pulse (the
+  // leak bleeds off some of the push-phase gain before the decel phase can
+  // cancel it), leaving a real residual velocity after the pulse ends —
+  // confirmed empirically to reach ~0.25 m/s at 2s (large enough to look
+  // like a second, spurious rep to reps.js) vs. ~0.03 m/s at 20s, while
+  // 20s only costs a small increase in worst-case sustained-rotation drift
+  // (~0.008 m/s over 10s of continuous spin, vs. ~0.002 m/s at 2s — both
+  // negligible next to a real ~1 m/s lift signal).
+  const VELOCITY_LEAK_TIME_CONSTANT_S = 20.0;
 
   const DEG2RAD = Math.PI / 180;
 

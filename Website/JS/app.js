@@ -17,14 +17,16 @@ const state = {
     active: false,
     sessionId: null,
     buffer: [],
+    repBuffer: [],
     flushTimer: null,
     startedAt: null,
     sampleCount: 0,
   },
 };
 
-const panels = {}; // sensor label -> { valX, valY, valZ, valV, valPeak, canvas, ctx, history, peak }
+const panels = {}; // sensor label -> { valX, valY, valZ, valV, valPeak, repPhaseEl, repPeakEl, repListEl, canvas, ctx, history, peak, reps }
 const trackers = {}; // sensor label -> MSProcessing tracker instance
+const repDetectors = {}; // sensor label -> MSReps detector instance
 
 // --- Live panels (dark-theme readout + canvas trace) ---
 
@@ -43,6 +45,8 @@ function ensurePanel(label) {
     </div>
     <canvas width="720" height="140"></canvas>
     <div class="peak">Peak: <span data-peak>—</span> m/s</div>
+    <div class="rep-status">Phase: <span data-rep-phase>—</span> <span data-rep-peak></span></div>
+    <ol class="rep-list" data-rep-list></ol>
   `;
   document.getElementById("panels").appendChild(wrapper);
 
@@ -53,10 +57,14 @@ function ensurePanel(label) {
     valZ: wrapper.querySelector("[data-z]"),
     valV: wrapper.querySelector("[data-v]"),
     valPeak: wrapper.querySelector("[data-peak]"),
+    repPhaseEl: wrapper.querySelector("[data-rep-phase]"),
+    repPeakEl: wrapper.querySelector("[data-rep-peak]"),
+    repListEl: wrapper.querySelector("[data-rep-list]"),
     canvas,
     ctx: canvas.getContext("2d"),
     history: [],
     peak: 0,
+    reps: [],
   };
   panels[label] = panel;
   return panel;
@@ -104,8 +112,36 @@ function handleSample(sample) {
     panel.valPeak.textContent = panel.peak.toFixed(2);
   }
 
+  const repDetector = repDetectors[sample.sensor];
+  const repEvent = repDetector ? repDetector.addSample(result) : null;
+  let live = null;
+
+  if (repDetector) {
+    live = repDetector.getLiveState();
+    panel.repPhaseEl.textContent = live.phase;
+    panel.repPeakEl.textContent = live.phase === "ascending" ? `(peak so far: ${live.peakSoFar.toFixed(2)} m/s)` : "";
+  }
+
+  if (repEvent) {
+    panel.reps.push(repEvent);
+    const li = document.createElement("li");
+    li.textContent = `#${repEvent.repIndex}: peak ${repEvent.peakVelocity.toFixed(2)} m/s, mean ${repEvent.meanVelocity.toFixed(2)}, median ${repEvent.medianVelocity.toFixed(2)}`;
+    panel.repListEl.appendChild(li);
+    if (state.recording.active) {
+      state.recording.repBuffer.push({ ...repEvent, sensor: sample.sensor });
+    }
+  }
+
   if (state.recording.active) {
-    const stored = result && !result.isCalibrating ? { ...sample, vVert: result.verticalVelocity } : sample;
+    const stored =
+      result && !result.isCalibrating
+        ? {
+            ...sample,
+            vVert: result.verticalVelocity,
+            phase: live ? live.phase : undefined,
+            repIndex: live ? live.provisionalRepIndex : undefined,
+          }
+        : sample;
     state.recording.buffer.push(stored);
   }
 }
@@ -137,6 +173,7 @@ async function onConnectClick(label) {
     const result = await state.transport.addSensor(label);
     state.sensors[label] = result;
     trackers[label] = MSProcessing.createTracker();
+    repDetectors[label] = MSReps.createRepDetector();
     button.textContent = `Disconnect (${label})`;
     button.dataset.connected = "true";
   } catch (err) {
@@ -151,6 +188,7 @@ function onDisconnectClick(label) {
   state.transport.disconnectSensor(label);
   state.sensors[label] = null;
   delete trackers[label];
+  delete repDetectors[label];
   const button = document.getElementById(`connect-${label}`);
   button.textContent = `Connect ${label[0].toUpperCase()}${label.slice(1)} Sensor`;
   button.dataset.connected = "false";
@@ -194,12 +232,22 @@ function connectedSensorLabels() {
 function flush() {
   const batch = state.recording.buffer;
   state.recording.buffer = [];
-  if (batch.length === 0) return;
-  state.recording.sampleCount += batch.length;
-  MSStorage.putSamples(state.recording.sessionId, batch).catch((err) =>
-    console.error("flush failed", err)
-  );
-  document.getElementById("recordingCount").textContent = state.recording.sampleCount;
+  const repBatch = state.recording.repBuffer;
+  state.recording.repBuffer = [];
+
+  if (batch.length > 0) {
+    state.recording.sampleCount += batch.length;
+    MSStorage.putSamples(state.recording.sessionId, batch).catch((err) =>
+      console.error("flush failed", err)
+    );
+    document.getElementById("recordingCount").textContent = state.recording.sampleCount;
+  }
+
+  if (repBatch.length > 0) {
+    MSStorage.putReps(state.recording.sessionId, repBatch).catch((err) =>
+      console.error("rep flush failed", err)
+    );
+  }
 }
 
 async function onStartRecording() {
@@ -211,15 +259,21 @@ async function onStartRecording() {
   // than connect time, when the sensor may still be getting attached.
   for (const label of connectedSensorLabels()) {
     if (trackers[label]) trackers[label].reset();
+    if (repDetectors[label]) repDetectors[label].reset();
     if (panels[label]) {
       panels[label].peak = 0;
       panels[label].valPeak.textContent = "—";
+      panels[label].reps = [];
+      panels[label].repListEl.innerHTML = "";
+      panels[label].repPhaseEl.textContent = "—";
+      panels[label].repPeakEl.textContent = "";
     }
   }
 
   state.recording.active = true;
   state.recording.sessionId = sessionId;
   state.recording.buffer = [];
+  state.recording.repBuffer = [];
   state.recording.startedAt = Date.now();
   state.recording.sampleCount = 0;
   state.recording.flushTimer = setInterval(flush, FLUSH_INTERVAL_MS);
@@ -278,6 +332,7 @@ async function refreshSessionList() {
       <td>${session.sampleCount}</td>
       <td>
         <button data-action="export" data-id="${session.id}">Export CSV</button>
+        <button data-action="export-reps" data-id="${session.id}">Export Reps CSV</button>
         <button data-action="delete" data-id="${session.id}">Delete</button>
       </td>
     `;
@@ -296,6 +351,17 @@ async function onExportCsv(sessionId) {
   URL.revokeObjectURL(url);
 }
 
+async function onExportRepsCsv(sessionId) {
+  const csv = await MSStorage.exportSessionRepsCsv(sessionId);
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `session_${sessionId}_reps.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 async function onDeleteSession(sessionId) {
   if (!confirm("Delete this session and all its recorded samples?")) return;
   await MSStorage.deleteSession(sessionId);
@@ -307,6 +373,7 @@ function onSessionTableClick(event) {
   if (!button) return;
   const sessionId = Number(button.dataset.id);
   if (button.dataset.action === "export") onExportCsv(sessionId);
+  else if (button.dataset.action === "export-reps") onExportRepsCsv(sessionId);
   else if (button.dataset.action === "delete") onDeleteSession(sessionId);
 }
 

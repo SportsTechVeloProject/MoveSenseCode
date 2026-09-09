@@ -7,7 +7,7 @@
 
 const MSStorage = (() => {
   const DB_NAME = "movesense-poc";
-  const DB_VERSION = 1;
+  const DB_VERSION = 2; // v2 adds the "reps" store
 
   let db = null;
 
@@ -32,6 +32,14 @@ const MSStorage = (() => {
             autoIncrement: true,
           });
           samples.createIndex("by_session", "sessionId");
+        }
+
+        if (!upgradeDb.objectStoreNames.contains("reps")) {
+          const reps = upgradeDb.createObjectStore("reps", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          reps.createIndex("by_session", "sessionId");
         }
       };
 
@@ -102,6 +110,32 @@ const MSStorage = (() => {
           gy: sample.gy,
           gz: sample.gz,
           vVert: sample.vVert,
+          phase: sample.phase,
+          repIndex: sample.repIndex,
+        });
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  function putReps(sessionId, batch) {
+    if (!batch || batch.length === 0) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("reps", "readwrite");
+      const store = tx.objectStore("reps");
+      for (const rep of batch) {
+        store.put({
+          sessionId,
+          sensor: rep.sensor,
+          repIndex: rep.repIndex,
+          startT: rep.startT,
+          endT: rep.endT,
+          duration: rep.duration,
+          peakVelocity: rep.peakVelocity,
+          meanVelocity: rep.meanVelocity,
+          medianVelocity: rep.medianVelocity,
+          sampleCount: rep.sampleCount,
         });
       }
       tx.oncomplete = () => resolve();
@@ -149,27 +183,58 @@ const MSStorage = (() => {
 
   function deleteSession(sessionId) {
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(["sessions", "samples"], "readwrite");
+      const tx = db.transaction(["sessions", "samples", "reps"], "readwrite");
+
       const sampleIndex = tx.objectStore("samples").index("by_session");
-      const cursorReq = sampleIndex.openCursor(IDBKeyRange.only(sessionId));
-      cursorReq.onsuccess = (event) => {
+      const sampleCursorReq = sampleIndex.openCursor(IDBKeyRange.only(sessionId));
+      sampleCursorReq.onsuccess = (event) => {
         const cursor = event.target.result;
         if (cursor) {
           cursor.delete();
           cursor.continue();
         }
       };
+
+      const repIndex = tx.objectStore("reps").index("by_session");
+      const repCursorReq = repIndex.openCursor(IDBKeyRange.only(sessionId));
+      repCursorReq.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
+
       tx.objectStore("sessions").delete(sessionId);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
   }
 
+  function getRepsForSession(sessionId) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("reps", "readonly");
+      const index = tx.objectStore("reps").index("by_session");
+      const results = [];
+      const req = index.openCursor(IDBKeyRange.only(sessionId));
+      req.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   function toCsv(samples) {
-    const header = "sessionId,sensor,t,recvAt,x,y,z,gx,gy,gz,vVert";
+    const header = "sessionId,sensor,t,recvAt,x,y,z,gx,gy,gz,vVert,phase,repIndex";
     const rows = samples.map(
       (s) =>
-        `${s.sessionId},${s.sensor},${s.t},${s.recvAt},${s.x},${s.y},${s.z},${s.gx},${s.gy},${s.gz},${s.vVert}`
+        `${s.sessionId},${s.sensor},${s.t},${s.recvAt},${s.x},${s.y},${s.z},${s.gx},${s.gy},${s.gz},${s.vVert},${s.phase},${s.repIndex}`
     );
     return [header, ...rows].join("\n");
   }
@@ -179,14 +244,31 @@ const MSStorage = (() => {
     return toCsv(samples);
   }
 
+  function toRepsCsv(reps) {
+    const header = "sessionId,sensor,repIndex,startT,endT,duration,peakVelocity,meanVelocity,medianVelocity,sampleCount";
+    const rows = reps.map(
+      (r) =>
+        `${r.sessionId},${r.sensor},${r.repIndex},${r.startT},${r.endT},${r.duration},${r.peakVelocity},${r.meanVelocity},${r.medianVelocity},${r.sampleCount}`
+    );
+    return [header, ...rows].join("\n");
+  }
+
+  async function exportSessionRepsCsv(sessionId) {
+    const reps = await getRepsForSession(sessionId);
+    return toRepsCsv(reps);
+  }
+
   return {
     init,
     createSession,
     finalizeSession,
     putSamples,
+    putReps,
     listSessions,
     getSamplesForSession,
+    getRepsForSession,
     deleteSession,
     exportSessionCsv,
+    exportSessionRepsCsv,
   };
 })();

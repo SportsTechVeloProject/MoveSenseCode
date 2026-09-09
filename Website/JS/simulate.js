@@ -8,7 +8,7 @@
  * recording, storage) be exercised and demoed without any Movesense
  * hardware nearby.
  *
- * Two scenarios, selectable via setScenario():
+ * Three scenarios, selectable via setScenario():
  *   "lift"     (default) — near-zero rotation, a repeating vertical accel
  *              pulse like a real rep: push, decelerate, rest.
  *   "rotation" — the bar spinning in place with no real translation.
@@ -17,6 +17,11 @@
  *              that's rotating the gravity vector in the accel channel) —
  *              this is what proves processing.js correctly rejects
  *              rotation instead of reporting it as fake velocity.
+ *   "squat"    — a generic descend-then-ascend cycle (rest, descend,
+ *              bottom pause, ascend, rest). The ascend half reuses the
+ *              exact same pulse shape as "lift", so its concentric peak
+ *              should match; the descend half is what proves reps.js
+ *              correctly excludes downward motion instead of measuring it.
  *
  * Safe to delete later: remove this file plus the "simulate mode"
  * controls and their handlers in app.js/index.html.
@@ -32,6 +37,11 @@ const MSSim = (() => {
   const LIFT_PUSH_S = 0.6;
   const LIFT_DECEL_S = 0.6;
   const LIFT_PEAK_ACCEL = 3.0; // m/s^2, world-vertical
+
+  const SQUAT_CYCLE_S = 5.0;
+  const SQUAT_LEAD_REST_S = 0.6; // rest before descent (lets ZUPT arm at cycle start)
+  const SQUAT_PULSE_S = LIFT_PUSH_S + LIFT_DECEL_S; // one push+decel unit, reused for descend/ascend
+  const SQUAT_BOTTOM_PAUSE_S = 0.4; // pause between descend and ascend (re-arms ZUPT)
 
   let scenario = "lift";
 
@@ -106,6 +116,32 @@ const MSSim = (() => {
     };
   }
 
+  // rest -> descend (negated pulse) -> bottom pause -> ascend (same pulse
+  // shape as liftSample) -> rest. Descend proves reps.js excludes downward
+  // motion; ascend should reproduce liftSample's ~1.0 m/s peak.
+  function squatSample(t) {
+    const tau = t % SQUAT_CYCLE_S;
+    let pulse = 0;
+
+    if (tau >= SQUAT_LEAD_REST_S && tau < SQUAT_LEAD_REST_S + SQUAT_PULSE_S) {
+      pulse = -liftPulseAt(tau - SQUAT_LEAD_REST_S);
+    } else {
+      const ascendStart = SQUAT_LEAD_REST_S + SQUAT_PULSE_S + SQUAT_BOTTOM_PAUSE_S;
+      if (tau >= ascendStart && tau < ascendStart + SQUAT_PULSE_S) {
+        pulse = liftPulseAt(tau - ascendStart);
+      }
+    }
+
+    return {
+      x: noise(0.05),
+      y: noise(0.05),
+      z: GRAVITY + pulse + noise(0.05),
+      gx: noise(0.5),
+      gy: noise(0.5),
+      gz: noise(0.5),
+    };
+  }
+
   function tick(label) {
     const entry = sensors[label];
     if (!entry) return;
@@ -117,7 +153,12 @@ const MSSim = (() => {
       entry.sampleIndex += 1;
       const t = entry.sampleIndex / SAMPLE_RATE_HZ;
 
-      const values = scenario === "rotation" ? rotationSample(t, entry.phase) : liftSample(t);
+      const values =
+        scenario === "rotation"
+          ? rotationSample(t, entry.phase)
+          : scenario === "squat"
+          ? squatSample(t)
+          : liftSample(t);
 
       sampleHandler({
         sensor: label,

@@ -140,6 +140,23 @@
   }
   .peak span { color: var(--text); font-variant-numeric: tabular-nums; }
 
+  .rep-status {
+    font-size: 13px;
+    color: var(--dim);
+    margin-top: 8px;
+    text-transform: capitalize;
+  }
+  .rep-status span:first-of-type { color: var(--text); }
+  .rep-list {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    font-size: 13px;
+    color: var(--dim);
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .rep-list li { margin-bottom: 4px; }
+
   #panels:empty::after {
     content: "Connect a sensor (or enable simulate mode) to see live data.";
     color: var(--dim);
@@ -223,6 +240,7 @@
         <select id="simulateScenario" disabled>
           <option value="lift" selected>Real lift (vertical pulse)</option>
           <option value="rotation">Rotation only (bar spin, no travel)</option>
+          <option value="squat">Squat-like (descend + ascend)</option>
         </select>
       </label>
       <div class="warning" id="bleWarning" hidden>
@@ -271,6 +289,7 @@
 
   <script src="JS/storage.js"></script>
   <script src="JS/processing.js"></script>
+  <script src="JS/reps.js"></script>
   <script src="JS/ble.js"></script>
   <script src="JS/simulate.js"></script>
   <script src="JS/app.js"></script>
