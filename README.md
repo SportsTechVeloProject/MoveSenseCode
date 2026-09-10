@@ -83,15 +83,15 @@ No Movesense hardware on hand? Tick the **"Use simulated sensors"** checkbox on 
 | File | Purpose |
 |---|---|
 | `movesense_breytt.html` | Original single-file Web Bluetooth prototype (jQuery + Plotly). Proved the multi-sensor connection pattern that `UI/JS/ble.js` is built on. |
-| `movesense_bridge.py` | Python BLE-to-WebSocket bridge for a single sensor — an earlier architecture where a local Python process relayed sensor data to the browser. Superseded by direct Web Bluetooth (no background process needed), kept as an optional dev/debug tool. |
+| `movesense_bridge.py` | Python BLE-to-WebSocket bridge for a single sensor - an earlier architecture where a local Python process relayed sensor data to the browser. Superseded by direct Web Bluetooth (no background process needed), kept as an optional dev/debug tool. |
 | `movesense_brigeMulti.py` | Same idea as above, extended to multiple sensors. Also superseded, also kept for reference. |
 
 <p align="center"><img src="docs/divider (2).svg" alt="" width="100%"></p>
 
 ## Architecture notes for the team
 
-- **No backend yet.** Everything currently lives in the browser (IndexedDB), scoped to one device. That's intentional for the proof-of-concept phase, but it does mean recorded sessions don't sync across devices or users — real sync needs a backend + auth, which is planned but not started (see [`BACKLOG.md`](BACKLOG.md)).
-- **Data shape stays consistent.** A `sample` is always `{ sensor, device, t, x, y, z }` (plus `recvAt` once persisted), whether it came from a real sensor or the simulator — anything consuming samples should rely on that shape, not on which transport produced them.
+- **No backend yet.** Everything currently lives in the browser (IndexedDB), scoped to one device. That's intentional for the proof-of-concept phase, but it does mean recorded sessions don't sync across devices or users - real sync needs a backend + auth, which is planned but not started (see [`BACKLOG.md`](BACKLOG.md)).
+- **Data shape stays consistent.** A `sample` is always `{ sensor, device, t, x, y, z }` (plus `recvAt` once persisted), whether it came from a real sensor or the simulator - anything consuming samples should rely on that shape, not on which transport produced them.
 - **No build tooling, on purpose.** No npm, no bundler — just plain HTML/CSS/JS, unless a real need for one shows up. Keeps the barrier to contributing close to zero.
 
 <p align="center">
