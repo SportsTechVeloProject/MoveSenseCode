@@ -43,11 +43,11 @@
   <!-- barbell -->
   <g transform="translate(160,140)">
     <!-- left plates: smallest outermost, largest innermost (nearest the bar) -->
-    <rect x="-42" y="-36" width="14" height="72" rx="3" fill="#26314A"/>
-    <rect x="-28" y="-52" width="18" height="104" rx="3" fill="#26314A"/>
+    <rect x="-50" y="-40" width="16" height="80" rx="3" fill="#3B4A6B"/>
+    <rect x="-32" y="-56" width="20" height="112" rx="3" fill="#3B4A6B"/>
     <!-- right plates: largest innermost (nearest the bar), smallest outermost -->
-    <rect x="890" y="-52" width="18" height="104" rx="3" fill="#26314A"/>
-    <rect x="908" y="-36" width="14" height="72" rx="3" fill="#26314A"/>
+    <rect x="890" y="-56" width="20" height="112" rx="3" fill="#3B4A6B"/>
+    <rect x="912" y="-40" width="16" height="80" rx="3" fill="#3B4A6B"/>
 
     <!-- bar: shaded 3D tube -->
     <rect x="-10" y="-7" width="900" height="14" rx="7" fill="url(#tube)"/>
@@ -69,12 +69,12 @@
           fill="none" stroke="url(#accentLine)" stroke-width="3" stroke-linecap="round"/>
 
     <!-- left sensor, mounted on the outer tip of the barbell -->
-    <circle cx="-46" cy="0" r="18" fill="url(#pulse)"/>
-    <circle cx="-46" cy="0" r="10" fill="#155E75" stroke="#22D3EE" stroke-width="1.5" filter="url(#glow)"/>
+    <circle cx="-56" cy="0" r="18" fill="url(#pulse)"/>
+    <circle cx="-56" cy="0" r="10" fill="#155E75" stroke="#22D3EE" stroke-width="1.5" filter="url(#glow)"/>
 
     <!-- right sensor, mounted on the outer tip of the barbell -->
-    <circle cx="926" cy="0" r="18" fill="url(#pulseGreen)"/>
-    <circle cx="926" cy="0" r="10" fill="#166534" stroke="#34D399" stroke-width="1.5" filter="url(#glow)"/>
+    <circle cx="936" cy="0" r="18" fill="url(#pulseGreen)"/>
+    <circle cx="936" cy="0" r="10" fill="#166534" stroke="#34D399" stroke-width="1.5" filter="url(#glow)"/>
   </g>
 
   <!-- title block -->
