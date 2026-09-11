@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/KTH-Sports%20Technology%20HT26-8892A6?style=flat-square&labelColor=1F2937&color=8892A6">
 </p>
 
-# MoveSense Barbell Velocity Tracker
+# The Project
 
 Tracks barbell velocity in real time using two Movesense IMU sensors — one mounted on each end of the bar — connected over Bluetooth. Built as a project for the **KTH Sports Technology HT26** course.
 
