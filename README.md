@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner(1).svg" alt="MoveSense Barbell Velocity Tracker banner" width="100%">
+  <img src="docs/banner (1).svg" alt="MoveSense Barbell Velocity Tracker banner" width="100%">
 </p>
 
 <p align="center">
