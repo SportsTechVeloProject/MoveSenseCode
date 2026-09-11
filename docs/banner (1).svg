@@ -79,8 +79,8 @@
 
   <!-- title block -->
   <g font-family="Helvetica, Arial, sans-serif">
-    <text x="80" y="60" font-size="34" font-weight="700" fill="#F8FAFC">MoveSense Barbell Velocity Tracker</text>
-    <text x="80" y="245" font-size="16" fill="#94A3B8">Understand your training — real-time barbell velocity from dual Movesense IMUs</text>
+    <text x="95" y="60" font-size="45" font-weight="700" fill="#F8FAFC">MoveSense Barbell Velocity Tracker</text>
+    <text x="95" y="245" font-size="20" fill="#94A3B8">Understand your training — real-time barbell velocity from dual Movesense IMUs</text>
   </g>
 
   <!-- status chip -->
