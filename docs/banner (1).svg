@@ -42,6 +42,7 @@
 
   <!-- barbell -->
   <g transform="translate(160,140)">
+    
     <!-- left plates: smallest outermost, largest innermost (nearest the bar) -->
     <rect x="-50" y="-40" width="16" height="80" rx="3" fill="#3B4A6B"/>
     <rect x="-32" y="-56" width="20" height="112" rx="3" fill="#3B4A6B"/>
