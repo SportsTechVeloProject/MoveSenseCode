@@ -15,10 +15,12 @@ analysis work that is actually the point of the project.
 ## Options
 
 1. **Custom IMU board** — full control over sampling and packet format,
-   but we spent two weeks on it without getting a stable BLE stream.
+  harder to create a product that fits on the end of the bar, a lot of programming work 
+  to get started.
 2. **Movesense** — off-the-shelf, documented API, gives accelerometer,
    gyroscope, magnetometer and multi-subscription out of the box.
    Less control over the internals, and we're bound to their sample rates.
+   Will be easier to create an attractive product to sell since it is already good looking.
 
 ## Decision
 
