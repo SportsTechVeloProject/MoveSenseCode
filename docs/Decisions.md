@@ -37,7 +37,7 @@ Use two Movesense units, one per bar sleeve.
 
 
 
-# Platform decision: website vs. native app
+# 2. Platform decision: website vs. native app
 
 ## Context
 
@@ -50,8 +50,7 @@ right call, given:
 - A 6-week deadline for the whole project, not just this piece.
 - The one non-negotiable requirement: connecting to **two** Movesense
   sensors at once has to be smooth and reliable.
-- No strong preference either way — "I would be happy with either a
-  nice website or app" — so the decision was free to be driven by
+- No strong preference either way so the decision was free to be driven by
   constraints rather than a prior commitment to one platform.
 - Later layers (login, exercise picker, feedback) still had to be
   buildable on top of whatever we picked.
